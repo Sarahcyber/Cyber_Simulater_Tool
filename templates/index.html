@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Cyber-Incident Simulator</title>
+  <style>
+    body { background:#0a1628; color:#c8d8f0; font-family:monospace; margin:0; padding:20px; }
+    h1   { color:#4a9fff; border-bottom:2px solid #1a4a8a; padding-bottom:8px; }
+    .panel { background:#0e2040; border:1px solid #1a4a8a; border-radius:6px;
+             padding:16px; margin-bottom:16px; }
+    input  { background:#0a1628; border:1px solid #1a4a8a; color:#c8d8f0;
+             padding:6px 10px; border-radius:4px; width:160px; }
+    button { padding:10px 24px; border:none; border-radius:4px; cursor:pointer;
+             font-weight:bold; font-size:14px; margin-right:10px; }
+    .btn-scan  { background:#1a4a8a; color:#fff; }
+    .btn-flood { background:#8a1a1a; color:#fff; }
+    #log-box { background:#050d1a; border:1px solid #1a4a8a; border-radius:4px;
+               padding:12px; height:300px; overflow-y:auto;
+               font-size:12px; line-height:1.6; }
+    .log-alert { color:#ff4444; } .log-ok { color:#44ff88; }
+    .log-info  { color:#88aaff; } .log-block { color:#ffaa00; font-weight:bold; }
+    #blocked-box { background:#1a0505; border:1px solid #8a1a1a;
+                   border-radius:4px; padding:10px; min-height:60px; font-size:12px; }
+  </style>
+</head>
+<body>
+  <h1>Cyber-Incident Simulator &amp; Responder</h1>
+ 
+  <!-- Attack Controls Panel -->
+  <div class="panel">
+    <h2 style="color:#4a9fff;margin-top:0">Attack Controls</h2>
+ 
+    <label>Target IP:</label>
+    <input id="target-ip" value="127.0.0.1"><br><br>
+ 
+    <strong style="color:#88aaff">Port Scan:</strong>
+    Port <input id="start-port" value="1" style="width:60px">
+    to  <input id="end-port"   value="100" style="width:60px">
+    <button class="btn-scan" onclick="startScan()">Start Port Scan</button>
+    <br><br>
+ 
+    <strong style="color:#ff8888">ICMP Flood:</strong>
+    Packets: <input id="packet-count" value="50" style="width:60px">
+    <button class="btn-flood" onclick="startFlood()">Start ICMP Flood</button>
+  </div>
+ 
+  <!-- Live Log Panel -->
+  <div class="panel">
+    <h2 style="color:#4a9fff;margin-top:0">Live Event Log</h2>
+    <div id="log-box"></div>
+  </div>
+ 
+  <!-- Blocked IPs Panel -->
+  <div class="panel">
+    <h2 style="color:#ff4444;margin-top:0">Blocked IPs (blocked_ips.txt)</h2>
+    <div id="blocked-box">No IPs blocked yet.</div>
+    <button onclick="loadBlocked()" style="background:#2a2a2a;color:#aaa;
+      border:1px solid #444;padding:6px 14px;border-radius:4px;
+      cursor:pointer;margin-top:10px;">Refresh Blocked List</button>
+  </div>
+ 
+  <script>
+    // ── SSE: Connect to /stream and display log messages ──
+    const logBox = document.getElementById("log-box");
+    const source = new EventSource("/stream");
+ 
+    source.onmessage = function(event) {
+      const message = event.data;
+      const line    = document.createElement("div");
+ 
+      // Colour-code by prefix
+      if (message.includes("[ALERT]") || message.includes("[FLOOD]"))
+        line.className = "log-alert";
+      else if (message.includes("[BLOCK]"))
+        line.className = "log-block";
+      else if (message.includes("[OK]") || message.includes("complete"))
+        line.className = "log-ok";
+      else
+        line.className = "log-info";
+ 
+      line.textContent = message;
+      logBox.appendChild(line);
+      logBox.scrollTop = logBox.scrollHeight;  // auto-scroll
+    };
+ 
+    // ── Start port scan ──
+    function startScan() {
+      const formData = new FormData();
+      formData.append("target_ip",   document.getElementById("target-ip").value);
+      formData.append("start_port",  document.getElementById("start-port").value);
+      formData.append("end_port",    document.getElementById("end-port").value);
+ 
+      fetch("/start_scan", { method:"POST", body:formData })
+        .then(r => r.json())
+        .then(data => {
+          if (data.status === "blocked") {
+            alert("AUTO-BLOCK triggered for " + data.ip);
+            loadBlocked();
+          }
+        });
+    }
+    // ── Start ICMP flood ──
+    function startFlood() {
+      const formData = new FormData();
+      formData.append("target_ip",    document.getElementById("target-ip").value);
+      formData.append("packet_count", document.getElementById("packet-count").value);
+ 
+      fetch("/start_flood", { method:"POST", body:formData })
+        .then(r => r.json())
+        .then(data => {
+          if (data.status === "blocked") {
+            alert("AUTO-BLOCK triggered for " + data.ip);
+            loadBlocked();
+          }
+        });
+    }
+ 
+    // ── Load blocked IPs from server ──
+    function loadBlocked() {
+      fetch("/get_blocked")
+        .then(r => r.json())
+        .then(data => {
+          const box = document.getElementById("blocked-box");
+          box.innerHTML = data.blocked.length
+            ? data.blocked.map(e => `<div style="color:#ff8888">${e}</div>`).join("")
+            : "No IPs blocked yet.";
+        });
+    }
+  </script>
+</body>
+</html>
+
