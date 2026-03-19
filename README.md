@@ -1,10 +1,10 @@
-#🛡️ Cyber-Incident Simulator & Responder 
+#Cyber-Incident Simulator & Responder 
 
 A Python-based Laboratory for Network Attack & Defense Simulation
 
 This project is an educational cybersecurity laboratory designed to demonstrate the lifecycle of a network attack. It simulates common threats and shows how automated defense systems (Mitigation Engines) can detect and neutralize these threats in real-time.
 
-#🎯 Project Overview
+#Project Overview
 
 The goal of this project is to bridge the gap between offensive and defensive security by providing a hands-on simulation of:
 
@@ -14,7 +14,7 @@ Disruption (Attack): Flooding a target with data to simulate a Denial of Service
 
 Automated Response (Defense): Monitoring traffic and automatically "blacklisting" offenders when thresholds are exceeded.
 
-#✨ Key Features
+#Key Features
 
 Port Scan Simulation: Uses TCP SYN packets to identify open services on a target IP.
 
